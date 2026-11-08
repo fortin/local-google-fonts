@@ -1,0 +1,24 @@
+{
+  "manifest_version": 2,
+  "name": "Local Google Fonts",
+  "version": "1.0.0",
+  "description": "Redirect selected Google Fonts requests to bundled local fonts.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "local-google-fonts@example.org"
+    }
+  },
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "web_accessible_resources": [
+    "fonts/material-symbols.css",
+    "fonts/MaterialSymbolsOutlined.ttf",
+    "icons/*.svg"
+  ]
+}
