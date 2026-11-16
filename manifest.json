@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "Local Google Fonts",
-  "version": "1.0.0",
-  "description": "Redirect selected Google Fonts requests to bundled local fonts.",
+  "version": "1.1.0",
+  "description": "Local font and SVG icon replacements for YouTube and YouTube Studio.",
   "browser_specific_settings": {
     "gecko": {
       "id": "local-google-fonts@example.org"
@@ -11,11 +11,24 @@
   "permissions": [
     "webRequest",
     "webRequestBlocking",
-    "<all_urls>"
+    "https://fonts.googleapis.com/*",
+    "https://fonts.gstatic.com/*",
+    "https://www.youtube.com/*",
+    "https://studio.youtube.com/*"
   ],
   "background": {
     "scripts": ["background.js"]
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://studio.youtube.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "web_accessible_resources": [
     "fonts/material-symbols.css",
     "fonts/MaterialSymbolsOutlined.ttf",
