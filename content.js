@@ -19,6 +19,7 @@
   // SVGs stored as icons/<style>-<name>.svg.
   // Only include files actually present in icons/.
   const bundledIcons = new Set([
+    "fill-closed_captions",
     "fill-dashboard",
     "fill-pause",
     "fill-play",
@@ -93,108 +94,130 @@
     );
   }
 
-  const maskProperties = [
-    "mask",
-    "-webkit-mask",
-    "mask-image",
-    "-webkit-mask-image"
-  ];
+  function normalizedMask(value) {
+    return value
+      .replace(/\s+/g, " ")
+      .replace(/\s+(?:alpha|luminance|match-source)\s*$/i, "")
+      .trim();
+  }
+
+  function isLocalMask(value) {
+    return value.includes("moz-extension://") &&
+      value.includes("/icons/");
+  }
+
+  // Rewriting style notifies the observer. Chasing Firefox's
+  // serialized mask value, or fighting YouTube's own style
+  // update, hangs the page. A remote icon can be replaced
+  // whenever it appears. A local mask gets one extra pass
+  // to restore -webkit-mask, and then we stop.
+  const localPasses = new WeakMap();
+  const observedRoots = [];
+  const observeOptions = {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["style"]
+  };
+
+  function reobserve() {
+    for (const root of observedRoots) {
+      observer.observe(root, observeOptions);
+    }
+  }
 
   function fixIcon(element) {
     if (!(element instanceof Element)) return;
 
     const inlineStyle = element.getAttribute("style");
+    if (!inlineStyle) return;
+
+    const hasRemote = inlineStyle.includes(
+      "fonts.gstatic.com/s/i/youtube_"
+    );
+    const hasLocal = isLocalMask(inlineStyle);
+
+    if (!hasRemote && !hasLocal) return;
+
+    // Outline ↔ fill swaps reuse the same node. Clear the
+    // local-only pass limit when a remote URL returns.
+    if (hasRemote) localPasses.delete(element);
+
+    const mask = element.style.getPropertyValue("mask");
+    const webkit = element.style.getPropertyValue("-webkit-mask");
+    const maskHasMode = /(?:^|\s)(?:alpha|luminance|match-source)\s*$/i
+      .test(mask.trim());
 
     if (
-      !inlineStyle ||
-      !inlineStyle.includes("fonts.gstatic.com/s/i/youtube_")
+      !hasRemote &&
+      isLocalMask(mask) &&
+      isLocalMask(webkit) &&
+      !maskHasMode
     ) {
       return;
     }
 
-    let changed = false;
-
-    // Work on the actual CSS declarations so we preserve
-    // YouTube's mask positioning, repeat and sizing.
-    for (const property of maskProperties) {
-      const original =
-        element.style.getPropertyValue(property);
-
-      if (!original.includes("fonts.gstatic.com")) {
-        continue;
-      }
-
-      const replacement = replaceURLs(original);
-
-      if (replacement === original) continue;
-
-      const priority =
-        element.style.getPropertyPriority(property);
-
-      element.style.setProperty(
-        property,
-        replacement,
-        priority
-      );
-
-      changed = true;
-      replacedCount++;
-
-      if (DEBUG) {
-        console.log(
-          "[Local Icons] Replaced:",
-          original,
-          "→",
-          replacement
-        );
-      }
+    if (!hasRemote && (localPasses.get(element) || 0) >= 1) {
+      return;
     }
+
+    const remoteValue = [mask, webkit].find(value =>
+      value.includes("fonts.gstatic.com/s/i/youtube_")
+    );
+    const localValue = normalizedMask(
+      remoteValue ? replaceURLs(remoteValue) : (mask || webkit)
+    );
+
+    if (remoteValue && !isLocalMask(localValue)) return;
+    if (!isLocalMask(localValue)) return;
+
+    if (!hasRemote) localPasses.set(element, 1);
+
+    const customProps = [];
 
     for (const property of element.style) {
       if (!property.startsWith("--")) continue;
 
-      const original =
-        element.style.getPropertyValue(property);
-
+      const original = element.style.getPropertyValue(property);
       if (!original.includes("fonts.gstatic.com/s/i/youtube_")) {
         continue;
       }
 
       const replacement = replaceURLs(original);
-      if (replacement === original) continue;
-
-      element.style.setProperty(
-        property,
-        replacement,
-        element.style.getPropertyPriority(property)
-      );
-
-      changed = true;
+      if (replacement !== original) {
+        customProps.push([property, replacement]);
+      }
     }
 
-    if (!changed) return;
+    observer.disconnect();
 
-    // The mask shorthand resets mask-mode to match-source.
-    // YouTube paints these with background-color, so the SVG
-    // has to be an alpha mask. Luminance mode treats the
-    // black fill as empty and the button stays blank.
-    element.style.setProperty("mask-mode", "alpha");
-    element.style.setProperty("-webkit-mask-mode", "alpha");
+    try {
+      for (const [property, replacement] of customProps) {
+        element.style.setProperty(property, replacement);
+      }
+
+      // `mask: url(...) alpha` is the clicked captions style.
+      // That keyword blanks the SVG. The visible style is the
+      // same url without a mask mode, on both properties.
+      element.style.removeProperty("mask-mode");
+      element.style.removeProperty("-webkit-mask-mode");
+      element.style.setProperty("mask", localValue);
+      element.style.setProperty("-webkit-mask", localValue);
+      replacedCount++;
+    } finally {
+      reobserve();
+    }
+
+    if (DEBUG) {
+      console.log("[Local Icons] Replaced:", localValue);
+    }
   }
 
-  const observedRoots = new WeakSet();
-
   function attachObserver(root) {
-    if (!root || observedRoots.has(root)) return;
+    if (!root || observedRoots.includes(root)) return;
 
-    observer.observe(root, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["style"]
-    });
-
-    observedRoots.add(root);
+    observedRoots.push(root);
+    observer.observe(root, observeOptions);
   }
 
   // Scan an element and its descendants, including open shadow roots.
@@ -213,7 +236,7 @@
     if (!root.querySelectorAll) return;
 
     root.querySelectorAll(
-      '[style*="fonts.gstatic.com/s/i/youtube_"]'
+      '[style*="fonts.gstatic.com/s/i/youtube_"], [style*="moz-extension://"][style*="/icons/"]'
     ).forEach(fixIcon);
 
     root.querySelectorAll("*").forEach(element => {

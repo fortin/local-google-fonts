@@ -4,6 +4,7 @@
 mkdir -p icons
 
 icons=(
+  "fill/closed_captions/v4"
   "fill/dashboard/v2"
   "fill/pause/v9"
   "fill/play/v4"
