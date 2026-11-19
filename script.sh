@@ -5,12 +5,15 @@ mkdir -p icons
 
 icons=(
   "fill/dashboard/v2"
+  "fill/pause/v9"
+  "fill/play/v4"
   "fill/spark/v12"
   "outline/alert_bubble/v3"
   "outline/arrow_up_right/v3"
   "outline/audio_square_stack/v2"
   "outline/bell/v12"
   "outline/chart_bar_square/v4"
+  "outline/closed_captions/v4"
   "outline/dollar_sign_circle/v12"
   "outline/gear/v10"
   "outline/help_circle/v2"

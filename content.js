@@ -20,6 +20,8 @@
   // Only include files actually present in icons/.
   const bundledIcons = new Set([
     "fill-dashboard",
+    "fill-pause",
+    "fill-play",
     "fill-spark",
 
     "outline-alert_bubble",
@@ -27,6 +29,7 @@
     "outline-audio_square_stack",
     "outline-bell",
     "outline-chart_bar_square",
+    "outline-closed_captions",
     "outline-dollar_sign_circle",
     "outline-gear",
     "outline-help_circle",
@@ -90,6 +93,13 @@
     );
   }
 
+  const maskProperties = [
+    "mask",
+    "-webkit-mask",
+    "mask-image",
+    "-webkit-mask-image"
+  ];
+
   function fixIcon(element) {
     if (!(element instanceof Element)) return;
 
@@ -102,9 +112,11 @@
       return;
     }
 
+    let changed = false;
+
     // Work on the actual CSS declarations so we preserve
     // YouTube's mask positioning, repeat and sizing.
-    for (const property of ["mask", "-webkit-mask"]) {
+    for (const property of maskProperties) {
       const original =
         element.style.getPropertyValue(property);
 
@@ -125,6 +137,7 @@
         priority
       );
 
+      changed = true;
       replacedCount++;
 
       if (DEBUG) {
@@ -136,25 +149,79 @@
         );
       }
     }
+
+    for (const property of element.style) {
+      if (!property.startsWith("--")) continue;
+
+      const original =
+        element.style.getPropertyValue(property);
+
+      if (!original.includes("fonts.gstatic.com/s/i/youtube_")) {
+        continue;
+      }
+
+      const replacement = replaceURLs(original);
+      if (replacement === original) continue;
+
+      element.style.setProperty(
+        property,
+        replacement,
+        element.style.getPropertyPriority(property)
+      );
+
+      changed = true;
+    }
+
+    if (!changed) return;
+
+    // The mask shorthand resets mask-mode to match-source.
+    // YouTube paints these with background-color, so the SVG
+    // has to be an alpha mask. Luminance mode treats the
+    // black fill as empty and the button stays blank.
+    element.style.setProperty("mask-mode", "alpha");
+    element.style.setProperty("-webkit-mask-mode", "alpha");
   }
 
-  // Scan an element and its descendants.
+  const observedRoots = new WeakSet();
+
+  function attachObserver(root) {
+    if (!root || observedRoots.has(root)) return;
+
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["style"]
+    });
+
+    observedRoots.add(root);
+  }
+
+  // Scan an element and its descendants, including open shadow roots.
   function scan(root) {
     if (!root) return;
 
     if (root.nodeType === Node.ELEMENT_NODE) {
       fixIcon(root);
+
+      if (root.shadowRoot) {
+        scan(root.shadowRoot);
+        attachObserver(root.shadowRoot);
+      }
     }
 
-    if (root.querySelectorAll) {
-      root.querySelectorAll(
-        '[style*="fonts.gstatic.com/s/i/youtube_"]'
-      ).forEach(fixIcon);
-    }
+    if (!root.querySelectorAll) return;
+
+    root.querySelectorAll(
+      '[style*="fonts.gstatic.com/s/i/youtube_"]'
+    ).forEach(fixIcon);
+
+    root.querySelectorAll("*").forEach(element => {
+      if (!element.shadowRoot) return;
+      scan(element.shadowRoot);
+      attachObserver(element.shadowRoot);
+    });
   }
-
-  // Repair icons already in the DOM.
-  scan(document);
 
   // Watch for YouTube's dynamically rendered icons.
   const observer = new MutationObserver(mutations => {
@@ -169,12 +236,9 @@
     }
   });
 
-  observer.observe(document.documentElement, {
-    subtree: true,
-    childList: true,
-    attributes: true,
-    attributeFilter: ["style"]
-  });
+  // Repair icons already in the DOM.
+  scan(document);
+  attachObserver(document.documentElement);
 
   console.info(
     "[Local Icons] Active on",
