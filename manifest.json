@@ -1,11 +1,12 @@
 {
   "manifest_version": 2,
   "name": "Local Google Fonts",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Local font and SVG icon replacements for YouTube and YouTube Studio.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "local-google-fonts@example.org"
+      "id": "local-google-fonts@fortin",
+      "strict_min_version": "109.0"
     }
   },
   "permissions": [

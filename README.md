@@ -16,19 +16,34 @@ Other Google Fonts families, icons that are not in the map, and unrelated `fonts
 
 Loading fonts or icons from Google can expose browsing activity (which sites you visit, when, and which assets they request). Serving a local copy removes that network hop for the assets this extension covers.
 
-## Install (temporary / development)
+## Install (permanent)
 
-Firefox does not need a signed build for local testing:
+A packaged build lives in `web-ext-artifacts/` after you run `npm run build` (or use the `.xpi` already built there).
+
+### Waterfox
+
+Waterfox allows unsigned add-ons, so you can install the package directly:
+
+1. Open `about:addons`.
+2. Open the gear menu → **Install Add-on From File…**.
+3. Choose `web-ext-artifacts/local_google_fonts-1.2.0.xpi`.
+
+The add-on stays installed across restarts. After you change source files, rebuild and install the new package (or temporarily load the unpacked source as below while developing).
+
+### Firefox
+
+Release Firefox requires Mozilla-signed packages. Either:
+
+- Prefer Waterfox / Firefox Developer Edition / Nightly with unsigned install allowed, or
+- Sign the build with [`web-ext sign`](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/) using your AMO API credentials.
+
+### Temporary / development
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on…**.
 3. Select this project’s `manifest.json`.
 
-The add-on stays loaded until Firefox restarts. Reload it from the same page after you change files.
-
-### Permanent install (optional)
-
-To keep it across restarts, package and sign it (for example with [`web-ext`](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/) and Mozilla’s signing flow), or use a self-distribution method you already trust. The extension ID in `manifest.json` is currently `local-google-fonts@example.org` — change that before publishing.
+Temporary add-ons unload on browser restart. Reload from that page after you change files.
 
 ## How it works
 

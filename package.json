@@ -1,0 +1,13 @@
+{
+  "name": "local-google-fonts",
+  "private": true,
+  "version": "1.2.0",
+  "description": "Firefox/Waterfox extension that serves local Google Fonts and YouTube icons.",
+  "scripts": {
+    "build": "web-ext build --overwrite-dest",
+    "lint": "web-ext lint"
+  },
+  "devDependencies": {
+    "web-ext": "^8.10.0"
+  }
+}
