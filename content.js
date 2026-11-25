@@ -24,6 +24,8 @@
     "fill-pause",
     "fill-play",
     "fill-spark",
+    "fill-thumb_down",
+    "fill-thumb_up",
 
     "outline-alert_bubble",
     "outline-arrow_in",
@@ -52,6 +54,8 @@
     "outline-text_align_left",
     "outline-text_bubble",
     "outline-theme",
+    "outline-thumb_down",
+    "outline-thumb_up",
     "outline-translate",
     "outline-subtitles",
     "outline-upload",
